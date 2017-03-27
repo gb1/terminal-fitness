@@ -10,55 +10,87 @@ defmodule TerminalFitness.Server do
   def accept(listening_socket, handler) do
     IO.puts "accept"
     socket = Socket.TCP.accept!(listening_socket)
+    # socket |> Socket.Stream.send!(IO.ANSI.blue_background())
     socket |> Socket.Stream.send!(welcome())
+    # socket |> Socket.Stream.send!(IO.ANSI.green_background())
     socket |> Socket.Stream.send!(options())
+
     spawn (fn -> handle(socket, handler) end)
     accept(listening_socket, handler)
   end
 
   def handle(socket, handler) do
     IO.puts "handle"
-    incoming = Socket.Stream.recv!(socket)
-    socket |> Socket.Stream.send!(handler.(incoming))
-    handle(socket, handler)
+
+    case Socket.Stream.recv(socket) do
+      # {:ok, nil} ->
+      #   socket |> Socket.Stream.shutdown
+      {:ok, "quit\r\n"} ->
+        socket |> Socket.Stream.shutdown
+      {:ok, incoming} ->
+        IO.inspect incoming
+        socket |> Socket.Stream.send!(handler.(incoming))
+        handle(socket, handler)
+      {:error, _incoming} ->
+        socket |> Socket.Stream.shutdown
+    end
   end
 
   def handler(line) do
-
     cond do
-      line =~ ~r/help/ -> options
-      line =~ ~r/1/ -> pushups
-      line =~ ~r/2/ -> squats
-      line =~ ~r/3/ -> plank
-      true -> "I'm not sure what you mean, type 'help' for options\n\r"
+      line =~ ~r/quit/ -> quit()
+      line =~ ~r/help/ -> options()
+      line =~ ~r/1/ -> pushups()
+      line =~ ~r/2/ -> squats()
+      line =~ ~r/3/ -> plank()
+      true ->
+        "I'm not sure what you mean by '"
+        <> String.trim(line)
+        <> "' , type 'help' for options\n\r"
     end
 
   end
 
   def welcome do
-    TableRex.quick_render!([["WELCOME TO TERMINAL FITNESS"]])
-    <> "\n\rCHOOSE AN OPTION:\n\r"
+
+    contents = File.read! "pics/weightlifter.txt"
+
+    IO.ANSI.clear() <>
+    IO.ANSI.green() <>
+     "\n" <>
+     "   *==================================*\n\r" <>
+     "   *    Welcome to Terminal Fitness   *\n\r" <>
+     "   *==================================*\n\r" <>
+     contents <>
+     "\nCHOOSE AN OPTION:\n\r"
   end
 
   def options do
-    TableRex.quick_render!([
-      ["1", "START PUSHUPS CHALLENGE"],
-      ["2", "START SQUAT CHALLENGE"],
-      ["3", "START PLANK CHALLENGE"],
-      ["help", "SHOW HELP"]],
-      ["COMMAND", "ACTION"], "OPTIONS")
+
+    IO.ANSI.blue() <>
+    "1. Pushup challenge\n\r" <>
+    "2. Squat challenge\n\r" <>
+    "3. Plank challenge\n\r" <>
+    "Choose 1-3: " <> IO.ANSI.white()
   end
 
   def pushups do
-    "pushups it is!"
+    IO.ANSI.clear <>
+    TerminalFitness.PushUps.greeting()
   end
 
   def squats do
+    IO.ANSI.clear <>
     "squats it is!"
   end
 
   def plank do
+    IO.ANSI.clear <>
     "plank it is!"
+  end
+
+  def quit() do
+    # socket |> Socket.Stream.shutdown
   end
 
 end

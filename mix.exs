@@ -31,7 +31,6 @@ defmodule TerminalFitness.Mixfile do
   defp deps do
     [
       {:socket, "~> 0.3.7"},
-      {:table_rex, "~> 0.10.0"}
     ]
   end
 end
